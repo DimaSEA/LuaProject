@@ -207,13 +207,16 @@ BtnBringPipes.MouseButton1Click:Connect(function()
     if not hrp then return end
     
     local count = 0
-    local spacing = 5 -- Jarak berjejer kesamping (dalam studs)
+    local spacing = 5
+    local basePos = hrp.Position + (hrp.CFrame.LookVector * 7)
     
     for _, o in pairs(game:GetService("Workspace"):GetDescendants()) do
         if o.Name == "WaterPipe" then
-            -- Logika baru: Pipa dipaksa ngikutin orientasi berdiri tegak dari badan lo, lalu digeser berjejer
             local offset = (count * spacing) - 6
-            local straightCFrame = hrp.CFrame * CFrame.new(offset, -1, -7)
+            local newPos = basePos + (hrp.CFrame.RightVector * offset)
+            
+            local _, lookY, _ = hrp.CFrame:ToEulerAnglesXYZ()
+            local straightCFrame = CFrame.new(newPos.X, hrp.Position.Y - 1, newPos.Z) * CFrame.Angles(0, lookY, 0)
             
             if o:IsA("Model") then
                 o:PivotTo(straightCFrame)
@@ -222,7 +225,7 @@ BtnBringPipes.MouseButton1Click:Connect(function()
                 o.AssemblyLinearVelocity = Vector3.new(0,0,0)
                 o.AssemblyAngularVelocity = Vector3.new(0,0,0)
             end
-            count = count + 1 -- count naik di luar biar barisannya gak tumpuk-tumpukan
+            count = count + 1
         end
     end
 end)
