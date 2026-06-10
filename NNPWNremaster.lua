@@ -5,6 +5,7 @@ local StarterGui = game:GetService("StarterGui")
 local LocalPlayer = Players.LocalPlayer
 
 local savedPosition = nil
+local isCheckingTemp = false -- Variabel pengunci anti-spam lag
 
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "SuperFacility_Clean"
@@ -14,7 +15,7 @@ ScreenGui.Parent = CoreGui:FindFirstChild("RobloxGui") or CoreGui
 
 -- [[ FRAME UTAMA UI - VERSI MINI HP ]] --
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 220, 0, 220) -- Di-compact jadi ukuran kotak kecil biar pas di HP!
+MainFrame.Size = UDim2.new(0, 220, 0, 220)
 MainFrame.Position = UDim2.new(0.05, 0, 0.2, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 MainFrame.BackgroundTransparency = 0.15
@@ -32,7 +33,7 @@ Title.Size = UDim2.new(1, -30, 0, 30)
 Title.Position = UDim2.new(0, 8, 0, 0)
 Title.Text = "FACILITY GODMODE v5.0"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextSize = 11 -- Teks judul agak dikecilin biar pas
+Title.TextSize = 11
 Title.Font = Enum.Font.SourceSansBold
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.BackgroundTransparency = 1
@@ -63,7 +64,7 @@ local ButtonMenuScroll = Instance.new("ScrollingFrame")
 ButtonMenuScroll.Size = UDim2.new(1, -12, 1, -10)
 ButtonMenuScroll.Position = UDim2.new(0, 6, 0, 5)
 ButtonMenuScroll.BackgroundTransparency = 1
-ButtonMenuScroll.CanvasSize = UDim2.new(0, 0, 0, 360) -- Batas scroll tetep menampung seluruh tombol
+ButtonMenuScroll.CanvasSize = UDim2.new(0, 0, 0, 360)
 ButtonMenuScroll.ScrollBarThickness = 4
 ButtonMenuScroll.Parent = MainContainer
 
@@ -78,7 +79,7 @@ local function createHackButton(text, color, order)
     btn.BackgroundColor3 = color
     btn.Text = text
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.TextSize = 10.5 -- Ukuran teks tombol disesuaikan biar ramah layar HP kecil
+    btn.TextSize = 10.5
     btn.Font = Enum.Font.SourceSansBold
     btn.LayoutOrder = order
     btn.Parent = ButtonMenuScroll
@@ -269,26 +270,42 @@ BtnBringTrans.MouseButton1Click:Connect(function()
     end
 end)
 
--- [[ SYSTEM CHECK REACTOR TEMPERATURE ]] --
+-- [[ SYSTEM CHECK REACTOR TEMPERATURE (ANTI-LAG REFRESH 3 DETIK) ]] --
 BtnCheckTemp.MouseButton1Click:Connect(function()
-    local target = game:GetService("Workspace"):FindFirstChild("ReactorMetrics")
-    local tempObj = target and target:FindFirstChild("Temperature")
+    if isCheckingTemp then return end -- Blokir kalau masih masa cooldown 3 detik
+    isCheckingTemp = true
+    
+    local repStorage = game:GetService("ReplicatedStorage")
+    local rMetrics = repStorage:FindFirstChild("ReactorMetrics")
+    local tempObj = rMetrics and rMetrics:FindFirstChild("Temperature")
     
     if tempObj and (tempObj:IsA("NumberValue") or tempObj:IsA("IntValue") or tempObj:IsA("StringValue")) then
         local currentTemp = tempObj.Value
         
+        -- Langsung munculin data
         StarterGui:SetCore("SendNotification", {
             Title = "🌡️ Reactor Temp",
             Text = "Suhu Saat Ini: " .. tostring(currentTemp) .. " K",
-            Duration = 3
+            Duration = 2.5 -- Notif hilang sebelum tombol cooldown kelar
         })
     else
         StarterGui:SetCore("SendNotification", {
             Title = "Gagal Cek Suhu! ❌",
-            Text = "Data 'Temperature' di ReactorMetrics tidak ditemukan.",
-            Duration = 3
+            Text = "Jalur data tidak merespon.",
+            Duration = 2
         })
     end
+    
+    -- Ubah tampilan tombol jadi cooldown selama 3 detik biar ramah HP
+    local originalColor = BtnCheckTemp.BackgroundColor3
+    BtnCheckTemp.BackgroundColor3 = Color3.fromRGB(70, 80, 90)
+    BtnCheckTemp.Text = "⏱️ Cooldown (3s)..."
+    
+    task.wait(3) -- Delay refresh 3 detik sesuai request lu!
+    
+    BtnCheckTemp.BackgroundColor3 = originalColor
+    BtnCheckTemp.Text = "🌡️ Check Reactor Temperature"
+    isCheckingTemp = false -- Kunci dibuka kembali
 end)
 
 -- [[ SYSTEM CAR TELEPORT BYPASS ]] --
