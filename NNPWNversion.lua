@@ -103,8 +103,8 @@ local function createHackButton(text, color, order)
 end
 
 local BtnUnlockChat = createHackButton("🔓 Force Unlock Default Chat", Color3.fromRGB(142, 68, 173), 1)
-local BtnTweenAlpha = createHackButton("👻 Ghost Tween Coolant Alpha", Color3.fromRGB(41, 128, 185), 2)
-local BtnTweenBeta  = createHackButton("👻 Ghost Tween Coolant Beta", Color3.fromRGB(41, 128, 185), 3)
+local BtnTweenAlpha = createHackButton("⚡ Instant Trigger Coolant Alpha", Color3.fromRGB(41, 128, 185), 2)
+local BtnTweenBeta  = createHackButton("⚡ Instant Trigger Coolant Beta", Color3.fromRGB(41, 128, 185), 3)
 local BtnClearMines = createHackButton("💣 Destroy All Landmine", Color3.fromRGB(231, 76, 60), 4)
 local BtnBringPipes = createHackButton("🛠️ Bring Pipes (Stand Up)", Color3.fromRGB(39, 174, 96), 5)
 local BtnSetCoord   = createHackButton("🔵 [Car TP] Set Coordinate", Color3.fromRGB(0, 150, 255), 6)
@@ -153,43 +153,86 @@ BtnUnlockChat.MouseButton1Click:Connect(function()
     BtnUnlockChat.Text = "Chat Unlocked! ✅"
 end)
 
--- [[ SYSTEM GHOST TWEEN INTERACT ]] --
-local function ghostTween(type)
+-- [[ ✨ REPLACED: NEW INSTANT TELEPORT INTERACT (ALPHA & BETA) ✨ ]] --
+local function instantTriggerCoolant(coolantType)
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    local hum = char and char:FindFirstChildOfClass("Humanoid")
-    if not hrp or not hum then return end
-    
+    if not hrp then return end
+
+    -- Ambil path sesuai tipe (CoolantBeta atau CoolantAlpha)
     local success, prompt = pcall(function()
-        return game:GetService("Workspace").FacilitySystems.Controls.Coolant["Coolant" .. type].Main.ProximityPrompt
+        return workspace.FacilitySystems.Controls.Coolant["Coolant" .. coolantType].Main.ProximityPrompt
     end)
-    
-    if success and prompt and prompt:IsA("ProximityPrompt") then
-        local targetPart = prompt.Parent
-        local originalCFrame = hrp.CFrame
-        local parts = {}
-        
-        for _, p in pairs(char:GetDescendants()) do
-            if p:IsA("BasePart") and p.CanCollide then parts[p] = true; p.CanCollide = false end
-        end
-        hum:ChangeState(Enum.HumanoidStateType.Physics)
-        
-        local distance = (targetPart.Position - hrp.Position).Magnitude
-        local tweenInfo = TweenInfo.new(distance / 250, Enum.EasingStyle.Linear)
-        local tTo = TweenService:Create(hrp, tweenInfo, {CFrame = targetPart.CFrame + Vector3.new(0, 2, 0)})
-        tTo:Play() tTo.Completed:Wait() task.wait(0.1)
-        
-        prompt:InputHoldBegin() task.wait(prompt.HoldDuration + 0.05) prompt:InputHoldEnd() task.wait(0.1)
-        
-        local tBack = TweenService:Create(hrp, tweenInfo, {CFrame = originalCFrame})
-        tBack:Play() tBack.Completed:Wait()
-        
-        hum:ChangeState(Enum.HumanoidStateType.GettingUp)
-        for p, _ in pairs(parts) do if p and p.Parent then p.CanCollide = true end end
+
+    if not success or not prompt then
+        warn("Coolant " .. coolantType .. " ProximityPrompt gak ketemu, Dim!")
+        return
     end
+
+    -- Simpan posisi awal buat pulang kampung
+    local originalPos = hrp.CFrame
+
+    -- Cari posisi target part
+    local targetCFrame = nil
+    local part = prompt.Parent:FindFirstChildWhichIsA("BasePart")
+    if part then
+        targetCFrame = part.CFrame
+    else
+        targetCFrame = CFrame.new(prompt.Parent.Position)
+    end
+
+    -- TELEPORT + HADEPIN KE PROMPT
+    hrp.CFrame = targetCFrame + Vector3.new(0, 3, 0)
+    task.wait(0.05)
+    hrp.CFrame = CFrame.lookAt(hrp.Position, prompt.Parent.Position)
+
+    -- FORCE BYPASS SETTING PROMPT
+    prompt.MaxActivationDistance = 50
+    prompt.Enabled = true
+    task.wait(0.1)
+
+    -- PROSES EKSEKUSI (3 METODE TRIGGER)
+    local triggered = false
+
+    -- Cara 1: Invoking prompt bawaan engine
+    pcall(function()
+        prompt:Prompt(LocalPlayer)
+        triggered = true
+        print("Cara 1: Prompt() executed")
+    end)
+
+    task.wait(0.1)
+
+    -- Cara 2: Executer framework function (fireproximityprompt)
+    if fireproximityprompt and not triggered then
+        pcall(function()
+            fireproximityprompt(prompt)
+            triggered = true
+            print("Cara 2: fireproximityprompt executed")
+        end)
+    end
+
+    task.wait(0.1)
+
+    -- Cara 3: Simulasi pencet tombol E di keyboard virtual
+    if not triggered then
+        local VirtualInput = game:GetService("VirtualInputManager")
+        VirtualInput:SendKeyPress("E", Enum.KeyCode.E)
+        task.wait(0.05)
+        VirtualInput:SendKeyRelease("E", Enum.KeyCode.E)
+        print("Cara 3: Simulated E key")
+    end
+
+    task.wait(0.1)
+
+    -- PULANG KE POSISI SEMULA
+    hrp.CFrame = originalPos
+    print("Selesai - Coolant " .. coolantType .. " Trigger status: " .. tostring(triggered))
 end
-BtnTweenAlpha.MouseButton1Click:Connect(function() ghostTween("Alpha") end)
-BtnTweenBeta.MouseButton1Click:Connect(function() ghostTween("Beta") end)
+
+-- Pasang fungsi baru ke tombol Alpha dan Beta
+BtnTweenAlpha.MouseButton1Click:Connect(function() instantTriggerCoolant("Alpha") end)
+BtnTweenBeta.MouseButton1Click:Connect(function() instantTriggerCoolant("Beta") end)
 
 -- [[ HAPUS RANJAU LANDMINE ]] --
 BtnClearMines.MouseButton1Click:Connect(function()
